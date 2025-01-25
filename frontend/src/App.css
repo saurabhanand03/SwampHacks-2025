@@ -1,3 +1,9 @@
+body {
+  background-color: #f0f0f0;
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
 .App {
   text-align: center;
 }
@@ -22,6 +28,8 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  text-align: center;
+  padding: 20px;
 }
 
 .App-link {
@@ -35,4 +43,56 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.chat-box {
+  max-height: 400px;
+  overflow-y: auto;
+  width: 80%;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+.chat-message {
+  margin: 10px 0;
+}
+
+.chat-message.user {
+  text-align: right;
+  color: #007bff;
+}
+
+.chat-message.assistant {
+  text-align: left;
+  color: #28a745;
+}
+
+form {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+input {
+  width: 70%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+button {
+  padding: 10px 20px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #61dafb;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #21a1f1;
 }
