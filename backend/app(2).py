@@ -1,31 +1,38 @@
-from flask import Flask, request, Response
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from llama_cpp import Llama
-import json
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize Llama model
-# Make sure to download the Llama model file and update the path accordingly
-llm = Llama(model_path="./models/llama-2-7b-chat.gguf", n_ctx=2048)
+OLLAMA_API_URL = "https://api.ollama.com/v1/generate"
+OLLAMA_API_KEY = "your_ollama_api_key"  # Replace with your actual Ollama API key
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.json
     messages = data.get('messages', [])
 
-    # Convert messages to Llama format
-    prompt = "".join([f"{m['role']}: {m['content']}\n" for m in messages])
-    prompt += "assistant: "
+    # Extract the last user message
+    if messages:
+        last_message = messages[-1]['content']
+    else:
+        last_message = "Hello! How can I assist you today?"
 
-    def generate():
-        for token in llm(prompt, max_tokens=200, stop=["user:", "\n"], stream=True):
-            content = token["choices"][0]["text"]
-            yield f"data: {json.dumps({'content': content})}\n\n"
-        yield "data: [DONE]\n\n"
+    # Make a request to the Ollama API
+    headers = {
+        'Authorization': f'Bearer {OLLAMA_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'prompt': last_message,
+        'model': 'llama-2-7b-chat'  # Specify the model you want to use
+    }
+    response = requests.post(OLLAMA_API_URL, headers=headers, json=payload)
+    response_data = response.json()
+    response_message = response_data['choices'][0]['text']
 
-    return Response(generate(), mimetype='text/event-stream')
+    return jsonify({"content": response_message})
 
 if __name__ == '__main__':
     app.run(debug=True)
