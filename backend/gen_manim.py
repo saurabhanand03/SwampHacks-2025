@@ -1,26 +1,39 @@
 from flask import Flask, request, jsonify
 import requests
 import re
+import time
 
 app = Flask(__name__)
 
-ANIMO_API_URL = "https://api.animo.video/v1/chat/generation"
+ANIMO_API_URL = "http://127.0.0.1:8080/v1/chat/generation"
 
 def get_manim_code(prompt):
     headers = {
         'Content-Type': 'application/json'
     }
     payload = {
-        'prompt': prompt
+        'messages': [{'role': 'user', 'content': prompt}],
+        'engine': 'openai'  # or 'anthropic' depending on your preference
     }
-    print(ANIMO_API_URL, headers, payload)
-    response = requests.post(ANIMO_API_URL, headers=headers, json=payload)
-    print(response)
-    
+    print(f"Sending request to {ANIMO_API_URL} with headers {headers} and payload {payload}")
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(ANIMO_API_URL, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()  # Raise an HTTPError for bad responses
+            break  # Exit the loop if the request is successful
+        except requests.exceptions.Timeout:
+            print(f"Attempt {attempt + 1} of {max_retries} timed out. Retrying...")
+            time.sleep(5)  # Wait for 5 seconds before retrying
+        except requests.exceptions.RequestException as e:
+            return None, f"Error: An error occurred while making the request to Animo API: {e}"
+    else:
+        return None, "Error: Request to Animo API timed out after multiple attempts"
+
     # Check if the response is successful
     if response.status_code != 200:
         return None, f"Error: Received status code {response.status_code} from Animo API"
-    print(response.json())
 
     try:
         response_data = response.json()
@@ -37,10 +50,8 @@ def get_manim_code(prompt):
 
 @app.route('/api/generate_manim', methods=['POST'])
 def generate_manim():
-    print("Request received")
     data = request.json
     prompt = data.get('prompt', '')
-    print(f"Prompt: {prompt}")
 
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
