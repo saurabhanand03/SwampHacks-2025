@@ -34,8 +34,17 @@ const ChatInterface = () => {
       const data = await response.json();
       console.log(data);
 
-      const cpuMessage = { type: "cpu", text: data };
-      setMessages((prevMessages) => [...prevMessages, cpuMessage]);
+      const newMessages = data.map((item) => {
+        if (item.text) {
+          return { type: "cpu", text: item.text };
+        } else if (item.manim_video && item.manim_video.video_url) {
+          return { type: "cpu", video_url: item.manim_video.video_url };
+        } else {
+          return item;
+        }
+      });
+
+      setMessages((prevMessages) => [...prevMessages, ...newMessages]);
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMessage = {
@@ -55,6 +64,12 @@ const ChatInterface = () => {
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.type}`}>
             {msg.text}
+            {msg.video_url && (
+              <video width="600" controls>
+                <source src={msg.video_url} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            )}
           </div>
         ))}
         {isLoading && <div className="message cpu">Typing...</div>}
