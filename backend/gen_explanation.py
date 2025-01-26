@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify
 import requests
 import json
 from openai import OpenAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 LLM = "GPT4.0" # OLLAMA
 
 app = Flask(__name__)
@@ -27,7 +32,7 @@ def chat():
 if LLM == "OLLAMA":
     OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate"
 elif LLM == "GPT4.0":
-    OPENAI_API_KEY = "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"
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     client = OpenAI(
         api_key=OPENAI_API_KEY,
     )
