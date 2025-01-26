@@ -17,7 +17,7 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/query-llama", {
+      const response = await fetch("http://127.0.0.1:5002/api/full_pipeline", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -25,13 +25,16 @@ const ChatInterface = () => {
         body: JSON.stringify({ prompt: inputMessage }),
       });
 
+      console.log(response);
+
       if (!response.ok) {
         throw new Error("Chat API request failed");
       }
 
       const data = await response.json();
+      console.log(data);
 
-      const cpuMessage = { type: "cpu", text: data.content };
+      const cpuMessage = { type: "cpu", text: data };
       setMessages((prevMessages) => [...prevMessages, cpuMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -47,6 +50,7 @@ const ChatInterface = () => {
 
   return (
     <div className="chat-interface">
+      <h1 className="chat-title">InSight</h1>
       <div className="chat-messages">
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.type}`}>

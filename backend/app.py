@@ -1,93 +1,79 @@
 import re
 import requests
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-# Import the Python function from gen_recording.py
+# 1) Import the Python function from gen_explanation.py
+from gen_explanation import generate_explanation
+
+# 2) Import the Python function from gen_recording.py
 from gen_recording import render_manim_code
 
-app = Flask(__name__)
+# 3) Import the Python function from gen_manim.py
+#    so we don't need to call the /api/generate_manim endpoint
+from gen_manim import get_manim_code
 
-# 1) An endpoint that orchestrates the entire pipeline
+app = Flask(__name__)
+CORS(app)
+
 @app.route("/api/full_pipeline", methods=["POST"])
 def full_pipeline():
     """
-    Expects a JSON body like:
+    Expects JSON body like:
       {
         "prompt": "some subject you want to explain, e.g. 'Neural networks'"
       }
-
     """
+    print("Received request")
     req_data = request.json or {}
     user_prompt = req_data.get("prompt")
     if not user_prompt:
         return jsonify({"error": "No 'prompt' provided"}), 400
+    print(f"Received prompt: {user_prompt}")
 
-    # ------------------------------------------------
-    # 1) Call gen_explanation's /query-llama endpoint
-    # ------------------------------------------------
-    # (Assuming gen_explanation runs on port 5000)
-    explanation_url = "http://127.0.0.1:5000/query-llama"
-    explanation_resp = requests.post(explanation_url, json={"prompt": user_prompt})
-    if explanation_resp.status_code != 200:
-        return jsonify({
-            "error": f"Call to gen_explanation failed with {explanation_resp.status_code}",
-            "details": explanation_resp.text
-        }), 500
+    try:
+        # ------------------------------------------------
+        # 1) Call gen_explanation directly
+        # ------------------------------------------------
+        full_text = generate_explanation(user_prompt)
+        print("Generated explanation successfully")
 
-    explanation_json = explanation_resp.json()
-    full_text = explanation_json.get("response", "")
+        # ------------------------------------------------
+        # 2) Extract everything between ***begin*** and ***end***
+        # ------------------------------------------------
+        # Each snippet is an "animation description"
+        snippets = re.split(r'(\*\*\*begin\*\*\*.*?\*\*\*end\*\*\*)', full_text, flags=re.DOTALL)
 
-    # ------------------------------------------------
-    # 2) Extract everything between triple backticks
-    #    i.e. the "animation descriptions"
-    # ------------------------------------------------
-    # Use a regex that grabs anything between ``` ... ```
-    snippets = re.findall(r'```(.*?)```', full_text, re.DOTALL)
+        # ------------------------------------------------
+        # 3) For each snippet, get Manim code, then render it
+        # ------------------------------------------------
+        result = []
+        for snippet in snippets:
+            if snippet.startswith("***begin***") and snippet.endswith("***end***"):
+                # Extract the snippet between ***begin*** and ***end***
+                snippet = snippet[len("***begin***"):-len("***end***")].strip()
 
-    # We'll store results for each snippet
-    video_results = []
+                # Generate Manim code by calling get_manim_code directly
+                manim_code, error = get_manim_code(snippet)
+                
+                if error:
+                    # If get_manim_code fails, store the error
+                    result.append({"error": error})
+                else:
+                    # Render that Manim code into a video
+                    record_result = render_manim_code(manim_code, project_name="my_cool_project")
+                    result.append({"manim_video": record_result})
+            else:
+                # Add the text snippet as is
+                result.append({"text": snippet})
 
+        # Return JSON for all parts
+        return jsonify(result)
 
-    for snippet in snippets:
-        manim_url = "http://127.0.0.1:5001/api/generate_manim"
-        manim_resp = requests.post(manim_url, json={"prompt": snippet})
-        if manim_resp.status_code != 200:
-            video_results.append({
-                "snippet": snippet,
-                "error": f"gen_manim returned {manim_resp.status_code}",
-                "details": manim_resp.text
-            })
-            continue
-
-        manim_json = manim_resp.json()
-        if "manim_code" not in manim_json:
-            video_results.append({
-                "snippet": snippet,
-                "error": manim_json.get("error", "No manim_code in response")
-            })
-            continue
-
-        # 3b) We have the generated Manim code. Now pass it to render_manim_code (locally imported from gen_recording)
-        manim_code = manim_json["manim_code"]
-        record_result = render_manim_code(manim_code, project_name="my_cool_project")
-
-        # record_result might look like:
-        #   {
-        #       "message": "...",
-        #       "video_url": "...",
-        #       "error": None / "some error"
-        #   }
-
-        # Let's store that in our final results
-        video_results.append({
-            "snippet": snippet,
-            "manim_code": manim_code,
-            "render_result": record_result
-        })
-
-
-    return jsonify({"videos": video_results}), 200
-
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
+    # Run the orchestrator on port 5002
     app.run(debug=True, port=5002)
