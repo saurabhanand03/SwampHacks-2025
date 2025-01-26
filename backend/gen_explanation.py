@@ -39,7 +39,7 @@ def query_llama():
 
         final_prompt = (
     f""""Your role is half teacher and half animation description creator. You must teach the user about \"{user_prompt}\". "
-    "Explain the concepts in a sequential manner. For each new concept, provide a detailed explanation and then, if there is a clear visual opportunity to enhance understanding, describe a separate animation that visualizes the concept. Start and End the animation description with ```.  explanations should not appear in the animation description parts of your response.\n\n"
+    "Explain the concepts in a sequential manner. For each new concept, provide a detailed explanation and then, if there is a clear visual opportunity to enhance understanding, describe a separate animation that visualizes the concept. Place each of the animation descriptions in between ``` and ```. only the animation descriptiosn go inbetween.  explanations should not appear in the animation description parts of your response.\n\n"
     "Treat every animation as standalone and independent, ensuring no assumptions about memory or continuity between animations. Every animation must focus on visual specificity and simplicity. For any text, labels, coordinate points, or specific numbers representing size appearing in the animation, enclose them in quotations, such as 'linear regression', 'circle', '5', or '(0, 0)'. Avoid ambiguous or abstract descriptions and ensure the animations are clear and easy to interpret.\n\n"
     "Each animation should explicitly describe the following in a concise, effective, and descriptive way:\n"
     "- Shapes (e.g., circles, squares, or arrows).\n"
